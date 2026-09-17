@@ -1,0 +1,80 @@
+name: Daily Starred Releases
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "5 9 * * *"
+      timezone: "Asia/Tokyo"
+
+permissions:
+  contents: write
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Collect yesterday releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          YDAY=$(TZ=Asia/Tokyo date -d yesterday +%F)
+
+          START_EPOCH=$(TZ=Asia/Tokyo date -d "$YDAY 00:00:00" +%s)
+          END_EPOCH=$((START_EPOCH + 86400))
+
+          START=$(date -u -d "@$START_EPOCH" +"%Y-%m-%dT%H:%M:%SZ")
+          END=$(date -u -d "@$END_EPOCH" +"%Y-%m-%dT%H:%M:%SZ")
+
+          gh api --paginate \
+            "users/WodenJay/starred?per_page=100" \
+            --jq '.[].full_name' > /tmp/starred.txt
+
+          mkdir -p /tmp/releases daily
+          i=0
+
+          while read -r repo; do
+            if gh api "repos/$repo/releases?per_page=100" \
+              > /tmp/repo-releases.json 2>/dev/null; then
+
+              jq \
+                --arg repo "$repo" \
+                --arg start "$START" \
+                --arg end "$END" \
+                '[.[]
+                  | select(.draft == false)
+                  | select(.published_at >= $start and .published_at < $end)
+                  | {
+                      repo: $repo,
+                      tag: .tag_name,
+                      name: .name,
+                      url: .html_url,
+                      published_at: .published_at,
+                      prerelease: .prerelease,
+                      body: .body
+                    }
+                ]' /tmp/repo-releases.json > "/tmp/releases/$i.json"
+
+              i=$((i + 1))
+            fi
+          done < /tmp/starred.txt
+
+          if [ "$i" -eq 0 ]; then
+            echo '[]' > "daily/$YDAY.json"
+          else
+            jq -s 'add' /tmp/releases/*.json > "daily/$YDAY.json"
+          fi
+
+      - name: Commit result
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add daily/
+
+          if ! git diff --cached --quiet; then
+            git commit -m "daily release digest"
+            git push
+          fi
