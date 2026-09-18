@@ -3,7 +3,7 @@ name: Daily Starred Releases
 on:
   workflow_dispatch:
   schedule:
-    - cron: "5 9 * * *"
+    - cron: "30 0 * * *"
       timezone: "Asia/Tokyo"
 
 permissions:
