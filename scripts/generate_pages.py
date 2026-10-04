@@ -111,8 +111,8 @@ def render_repo(repo: str, releases: list[dict[str, Any]]) -> str:
     if prerelease:
         count_parts.append(f"{prerelease} prerelease")
     release_html = "\n".join(
-        render_release(release, expanded=(index == 0))
-        for index, release in enumerate(releases)
+        render_release(release, expanded=False)
+        for release in releases
     )
     return f'''<section class="repo-block" data-repo="{esc(repo)}">
   <header class="repo-header">
