@@ -114,15 +114,15 @@ def render_repo(repo: str, releases: list[dict[str, Any]]) -> str:
         render_release(release, expanded=False)
         for release in releases
     )
-    return f'''<section class="repo-block" data-repo="{esc(repo)}">
-  <header class="repo-header">
-    <h2><a href="https://github.com/{esc(repo)}" rel="noopener noreferrer">{esc(repo)}</a></h2>
-    <p>{" · ".join(count_parts)}</p>
-  </header>
+    return f'''<details class="repo-block" data-repo="{esc(repo)}">
+  <summary class="repo-header">
+    <span class="repo-title" role="heading" aria-level="2"><a class="repo-link" href="https://github.com/{esc(repo)}" rel="noopener noreferrer">{esc(repo)} <span class="external-link-indicator" aria-hidden="true">↗</span></a></span>
+    <span class="repo-counts">{" · ".join(count_parts)}</span>
+  </summary>
   <div class="release-list">
 {release_html}
   </div>
-</section>'''
+</details>'''
 
 
 def render_page(
